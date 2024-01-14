@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "638150020050",
+    "project_id": "medallypro-860d2",
+    "storage_bucket": "medallypro-860d2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:638150020050:android:6de86880dde450dedc160b",
+        "android_client_info": {
+          "package_name": "com.dhakad.medallyproapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXvoukOwG7sb7Mhb0EpWT8vLq7AnWG0XU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
