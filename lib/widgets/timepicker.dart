@@ -11,7 +11,6 @@ class TimePickerRow extends StatefulWidget {
 }
 
 class _TimePickerRowState extends State<TimePickerRow> {
-  // List<String> selectedTimes = [];
   TimeProvider? timeProvider;
 
   @override
@@ -21,12 +20,13 @@ class _TimePickerRowState extends State<TimePickerRow> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Wrap(
-          spacing: 8.0, // Adjusted spacing between containers
-          runSpacing: 8.0, // Adjusted spacing between rows
+          spacing: 8.0,
+          runSpacing: 8.0,
           children: [
-            for (var time in timeProvider!.selectedTimes)
+            for (var i = 0; i < timeProvider!.selectedTimes.length; i++)
               TimeContainer(
-                time: time,
+                time: timeProvider!.selectedTimes[i],
+                onTap: () => _editTime(i),
               ),
             AddButton(
               onPressed: () => _showTimePicker(),
@@ -44,10 +44,23 @@ class _TimePickerRowState extends State<TimePickerRow> {
     );
 
     if (pickedTime != null) {
-      String formattedTime =
-      _formatTime(pickedTime.hour, pickedTime.minute,);
+      String formattedTime = _formatTime(pickedTime.hour, pickedTime.minute);
       setState(() {
         timeProvider!.addTime(formattedTime);
+      });
+    }
+  }
+
+  void _editTime(int index) async {
+    TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (pickedTime != null) {
+      String formattedTime = _formatTime(pickedTime.hour, pickedTime.minute);
+      setState(() {
+        timeProvider!.editTime(index, formattedTime);
       });
     }
   }
@@ -63,7 +76,6 @@ class _TimePickerRowState extends State<TimePickerRow> {
       }
     }
 
-    // Handle the case when the hour is 0 (midnight)
     if (hour == 0) {
       hour = 12;
     }
@@ -74,34 +86,41 @@ class _TimePickerRowState extends State<TimePickerRow> {
 
 class TimeContainer extends StatelessWidget {
   final String time;
+  final VoidCallback onTap;
 
-  const TimeContainer({super.key,
+  const TimeContainer({
+    Key? key,
     required this.time,
-  });
+    required this.onTap,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 40.0,
-      width: 95.0, // Adjusted width to fit three containers in one row
-      margin: const EdgeInsets.all(8.0),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10.0),
-        border: Border.all(color: primaryColor), // Replace with your primaryColor
-      ),
-      child: Text(
-        time,
-        style: const TextStyle(
-          fontSize: 14.0,
-          color: textBlackColor, // Replace with your textBlackColor
-          fontFamily: 'GT Walsheim Trial',
-          fontWeight: FontWeight.w400,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 40.0,
+        width: 95.0,
+        margin: const EdgeInsets.all(8.0),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10.0),
+          border: Border.all(color: primaryColor),
+        ),
+        child: Text(
+          time,
+          style: const TextStyle(
+            fontSize: 14.0,
+            color: textBlackColor,
+            fontFamily: 'GT Walsheim Trial',
+            fontWeight: FontWeight.w400,
+          ),
         ),
       ),
     );
   }
 }
+
 
 class AddButton extends StatelessWidget {
   final VoidCallback onPressed;
@@ -116,7 +135,7 @@ class AddButton extends StatelessWidget {
       onTap: onPressed,
       child: Container(
         height: 40.0,
-        width: 95.0, // Adjusted width to match TimeContainer
+        width: 95.0,
         margin: const EdgeInsets.all(8.0),
         alignment: Alignment.center,
         decoration: BoxDecoration(
@@ -124,7 +143,7 @@ class AddButton extends StatelessWidget {
           color: primaryColor, // Replace with your primaryColor
         ),
         child: const Text(
-          "Add",
+          "Add Time",
           style: TextStyle(
             fontSize: 14.0,
             color: Colors.white,

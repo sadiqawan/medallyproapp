@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../constants/mycolors.dart';
 
 class GlowingFloatingActionButton extends StatelessWidget {
-  const GlowingFloatingActionButton({super.key, required this.onPressed});
+  const GlowingFloatingActionButton({super.key, required this.onPressed, required this.myColor, required this.textColor});
 
   final VoidCallback onPressed;
+  final Color myColor;
+  final Color textColor;
 
   @override
   Widget build(BuildContext context) {
@@ -25,8 +27,8 @@ class GlowingFloatingActionButton extends StatelessWidget {
       ),
       child: FloatingActionButton.small(
         onPressed: onPressed,
-        backgroundColor: primaryColor,
-        child: const Icon(Icons.add),
+        backgroundColor: myColor,
+        child: Icon(Icons.add, color: textColor,),
       ),
     );
   }

@@ -1,13 +1,14 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:gap/gap.dart';
-import 'package:medallyproapp/auth/login_screen.dart';
 import 'package:medallyproapp/providers/register_provider.dart';
-import 'package:medallyproapp/widgets/custom_button.dart';
 import 'package:medallyproapp/widgets/gender_selection.dart';
 import 'package:provider/provider.dart';
 import '../constants/mycolors.dart';
 import '../widgets/my_textformfield.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -22,10 +23,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   TextEditingController nameController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
   TextEditingController dateOfBirthController = TextEditingController();
+  var connectivityResult = ConnectivityResult.none;
 
   DateTime? _selectedDate;
   Gender selectedGender = Gender.male;
 
+  // TODO SELECT DATE
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -42,6 +45,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Country selectedCountry = Country(
+    phoneCode: "91",
+    countryCode: "IN",
+    e164Sc: 0,
+    geographic: true,
+    level: 1,
+    name: "India",
+    example: "India",
+    displayName: "India",
+    displayNameNoCountryCode: "IN",
+    e164Key: "",
+  );
+
   @override
   Widget build(BuildContext context) {
     double height = MediaQuery.of(context).size.height;
@@ -56,14 +72,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: primaryColor,
         leading: IconButton(
           onPressed: () {
-            // Navigator.pushReplacement(
-            //   context,
-            //   MaterialPageRoute(
-            //     builder: (context) => const LoginScreen(),
-            //   ),
-            // );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const LoginScreen(),
+              ),
+            );
           },
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: textColor,),
         ),
       ),
       body: Stack(
@@ -115,6 +131,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 30.0),
                       child: MyTextFormField(
+                        readOnly: false,
                         controller: nameController,
                         hintText: "Enter your name",
                         labelText: "Enter your name",
@@ -129,29 +146,119 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const Gap(25.0),
+                    // Padding(
+                    //   padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                    //   child: MyTextFormField(
+                    //     controller: phoneNumberController,
+                    //     hintText: "Enter phone number",
+                    //     labelText: "Enter phone number",
+                    //     keyboardType: TextInputType.number,
+                    //     validator: (String? value) {
+                    //       if (value == null || value.isEmpty) {
+                    //         return 'Please enter your phone number';
+                    //       } else if (!RegExp(r'^\+?[0-9]+$').hasMatch(value)) {
+                    //         return 'Please enter a valid phone number';
+                    //       }
+                    //       return null;
+                    //     },
+                    //     enabledBorderColor: containerBorderColor,
+                    //     focusedBorderColor: primaryColor,
+                    //   ),
+                    // ),
+
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                      child: MyTextFormField(
+                      child: TextFormField(
+                        cursorColor: Colors.purple,
                         controller: phoneNumberController,
-                        hintText: "Enter phone number",
-                        labelText: "Enter phone number",
                         keyboardType: TextInputType.number,
-                        validator: (String? value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter your phone number';
-                          } else if (!RegExp(r'^\+?[0-9]+$').hasMatch(value)) {
-                            return 'Please enter a valid phone number';
-                          }
-                          return null;
+                        maxLength: 10,
+                        style: const TextStyle(
+                          color: textBlackColor,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        validator: (String? value){
+                          if(value == null || value.isEmpty){
+                            return 'Please enter phone number';
+                          }else if(value.length > 10){
+                            return 'Number length is not correct should be 10';
+                          } return null;
                         },
-                        enabledBorderColor: containerBorderColor,
-                        focusedBorderColor: primaryColor,
+                        onChanged: (value) {
+                          setState(() {
+                            phoneNumberController.text = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          counterText: '',
+                          hintText: "  Phone Number",
+                          labelText: 'Enter Phone Number',
+                          hintStyle: const TextStyle(
+                            color: textBlackColor,
+                          ),
+                          labelStyle: TextStyle(
+                            color: textBlackColor.withOpacity(0.5),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20.0),
+                            borderSide: const BorderSide(color: primaryColor),
+                          ),
+                          border: OutlineInputBorder(
+                            borderSide: const BorderSide(),
+                            borderRadius: BorderRadius.circular(20.0),
+                          ),
+                          prefixIcon: Container(
+                            padding: const EdgeInsets.only(
+                                top: 13.5, left: 10.0, right: 5.0),
+                            // Add right padding
+                            child: InkWell(
+                              onTap: () {
+                                showCountryPicker(
+                                  context: context,
+                                  countryListTheme: const CountryListThemeData(
+                                    bottomSheetHeight: 500,
+                                  ),
+                                  onSelect: (value) {
+                                    setState(() {
+                                      selectedCountry = value;
+                                    });
+                                  },
+                                );
+                              },
+                              child: Text(
+                                "${selectedCountry.flagEmoji} + ${selectedCountry.phoneCode}",
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ),
+                          suffixIcon: phoneNumberController.text.length > 9
+                              ? Container(
+                                  height: 30,
+                                  width: 30,
+                                  margin: const EdgeInsets.all(10.0),
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.green,
+                                  ),
+                                  child: const Icon(
+                                    Icons.done,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                )
+                              : null,
+                        ),
                       ),
                     ),
+
                     const Gap(25.0),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 30.0),
                       child: MyTextFormField(
+                        readOnly: false,
                         controller: dateOfBirthController,
                         labelText: "Date of Birth",
                         hintText: "Select Date of Birth",
@@ -194,7 +301,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       selectedGender: selectedGender,
                       onGenderChanged: (value) {
                         setState(() {
-                          selectedGender = value == 'male' ? Gender.male : Gender.female;
+                          selectedGender =
+                              value == 'male' ? Gender.male : Gender.female;
                         });
                       },
                     ),
@@ -224,7 +332,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     SizedBox(
                       width: 25.0,
                     ),
-                    Text("Loading, Please wait", style: TextStyle(color: textColor),),
+                    Text(
+                      "Loading, Please wait",
+                      style: TextStyle(color: textColor),
+                    ),
                   ],
                 ),
               ),
@@ -242,18 +353,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
             onPressed: () async {
               if (formKey.currentState!.validate()) {
                 if (selectedGender != null) {
-                  String genderString = selectedGender == Gender.male ? 'male' : 'female';
+                  String genderString =
+                      selectedGender == Gender.male ? 'male' : 'female';
 
-                  // Show CircularProgressIndicator
-                  registerProvider.isRegistering = true;
+                  var result = await Connectivity().checkConnectivity();
+                  setState(() {
+                    connectivityResult = result;
+                  });
 
-                  await registerProvider.registerUser(
-                    nameController.text,
-                    phoneNumberController.text,
-                    _selectedDate!,
-                    genderString,
-                    context,
-                  );
+                  if (connectivityResult == ConnectivityResult.none) {
+                    // No internet connection, show a dialog
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text("No Internet"),
+                        content: Text("Please check your internet connection."),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context); // Close the dialog
+                            },
+                            child: Text("OK"),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    // Show CircularProgressIndicator
+                    registerProvider.isRegistering = true;
+
+                    await registerProvider.registerUser(
+                      nameController.text,
+                      phoneNumberController.text,
+                      _selectedDate!,
+                      genderString,
+                      context,
+                    );
+                  }
                 }
               }
             },
@@ -278,6 +414,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-
-
-

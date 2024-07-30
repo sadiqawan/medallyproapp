@@ -54,9 +54,11 @@ class _SplashScreenState extends State<SplashScreen> {
                   filterQuality: FilterQuality.high,
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.only(top: 220.0, left: 120),
-                child: Text(
+              Container(
+                height: 500.0,
+                width: MediaQuery.of(context).size.width,
+                alignment: Alignment.center,
+                child: const Text(
                   'Medallypro',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -68,6 +70,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ),
               ),
+
               // Conditional rendering of the progress indicator
               if (provider.showProgressIndicator)
                 const Padding(

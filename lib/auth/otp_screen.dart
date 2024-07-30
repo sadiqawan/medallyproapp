@@ -4,12 +4,15 @@ import 'package:flutter/rendering.dart';
 import 'package:gap/gap.dart';
 import 'package:medallyproapp/constants/mycolors.dart';
 import 'package:medallyproapp/screens/prescription_list.dart';
+import 'package:provider/provider.dart';
+import '../providers/otp_provider.dart';
 import '../widgets/custom_button.dart';
 import 'auth_manager_class.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({Key? key, this.verificationId}) : super(key: key);
+  const OtpScreen({Key? key, this.verificationId, this.phoneNumber}) : super(key: key);
   final String? verificationId;
+  final String? phoneNumber;
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -35,7 +38,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   @override
   Widget build(BuildContext context) {
-
+    final loginProvider = Provider.of<OtpNotifier>(context, listen: false);
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -64,7 +67,7 @@ class _OtpScreenState extends State<OtpScreen> {
             Padding(
               padding: const EdgeInsets.only(left: 15.0),
               child: Text(
-                'Please enter the 4 digit OTP code that has been\nsent to 79******01',
+                'Please enter the 6 digit OTP code that has been\nsent to ${widget.phoneNumber}',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
@@ -139,14 +142,6 @@ class _OtpScreenState extends State<OtpScreen> {
                     print(ex.toString());
                   }
                 },
-                // onTap: (){
-                //   Navigator.pushReplacement(
-                //     context,
-                //     MaterialPageRoute(
-                //       builder: (context) => const PrescriptionListScreen(),
-                //     ),
-                //   );
-                // },
                 child: CustomButton(text: "Submit"),
               ),
             ),
@@ -168,7 +163,9 @@ class _OtpScreenState extends State<OtpScreen> {
             ),
             Center(
               child: TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  loginProvider.signInWithPhoneNumber("", context);
+                },
                 child: const Text(
                   'Resend Code',
                   style: TextStyle(

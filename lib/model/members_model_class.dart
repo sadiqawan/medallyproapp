@@ -2,7 +2,7 @@ class Member {
   String? memberId;
   String? name;
   String? phoneNumber;
-  String? age;
+  DateTime? dateOfBirth;
   String? gender;
   String? image;
   String? relation;
@@ -11,7 +11,7 @@ class Member {
     this.memberId,
      this.name,
      this.phoneNumber,
-     this.age,
+     this.dateOfBirth,
      this.gender,
     this.image,
      this.relation,

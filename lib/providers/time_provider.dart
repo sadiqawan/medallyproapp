@@ -8,6 +8,13 @@ class TimeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void editTime(int index, String newTime) {
+    if (index >= 0 && index < selectedTimes.length) {
+      selectedTimes[index] = newTime;
+      notifyListeners();
+    }
+  }
+
   void clearSelectedTimes() {
     selectedTimes.clear();
     notifyListeners();

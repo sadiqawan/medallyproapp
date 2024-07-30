@@ -6,7 +6,7 @@ class MedicineModel {
   String member;
   String medicineName;
   String intake;
-  List time;
+  List<String> time;
   String typeOfMedicine;
   String duration;
   String notes;

@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:medallyproapp/sharedpreference/share_preference.dart';
+import 'package:medallyproapp/widgets/customtoast_screen.dart';
 import '../auth/login_screen.dart';
 
 
@@ -92,9 +94,8 @@ class RegisterProvider extends ChangeNotifier {
       bool isUserAlreadyRegistered = await isUserRegistered(phoneNumber);
 
       if (isUserAlreadyRegistered) {
-        // If the user is already registered, you might want to handle this case
-        // Maybe show a message or navigate to a different screen
         print("User with phone number $phoneNumber is already registered");
+        CustomToast.showToast(context, "User with phone number $phoneNumber is already registered");
         return;
       }
 
@@ -115,6 +116,8 @@ class RegisterProvider extends ChangeNotifier {
         'userId': userCredential.user!.uid,
       });
 
+      print("object $name");
+      MySharedPrefClass.preferences?.setString("myName", name);
       // Navigate to the desired screen after successful registration
       Navigator.pushReplacement(
         context,
@@ -123,7 +126,10 @@ class RegisterProvider extends ChangeNotifier {
         ),
       );
     } catch (error) {
+      Fluttertoast.showToast(msg: "Error registering user: $error");
       print("Error registering user: $error");
+      _isRegistering = false;
+      notifyListeners();
     } finally {
       _isRegistering = false;
       notifyListeners();

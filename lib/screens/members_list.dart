@@ -1,21 +1,19 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:country_picker/country_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:gap/gap.dart';
+import 'package:intl/intl.dart';
 import 'package:medallyproapp/constants/mycolors.dart';
 import 'package:medallyproapp/screens/prescription_list.dart';
 import 'package:medallyproapp/widgets/glowingfloatingbutton.dart';
 import 'package:medallyproapp/widgets/my_textformfield.dart';
-import 'package:random_string/random_string.dart';
 import 'package:shimmer/shimmer.dart';
 import '../model/members_model_class.dart';
-import '../widgets/gender_selection.dart';
-import '../widgets/pick_image.dart';
+import '../widgets/customtoast_screen.dart';
+import 'add_members_screen.dart';
 
 class MembersListScreen extends StatefulWidget {
   const MembersListScreen({Key? key}) : super(key: key);
@@ -25,355 +23,410 @@ class MembersListScreen extends StatefulWidget {
 }
 
 class _MembersListScreenState extends State<MembersListScreen> {
-  final StreamController<List<Member>> _memberStreamController =
-      StreamController<List<Member>>();
-
-  Stream<List<Member>> get _memberStream => _memberStreamController.stream;
-
-  @override
-  void dispose() {
-    _memberStreamController.close();
-    super.dispose();
-  }
 
   TextEditingController nameController = TextEditingController();
   TextEditingController phoneNumberController = TextEditingController();
-  TextEditingController ageController = TextEditingController();
+  TextEditingController dateOfBirth = TextEditingController();
   User? user = FirebaseAuth.instance.currentUser;
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  List<Member> memberList = [];
+  bool _isLoading = false;
   String selectedGender = 'male';
   File? selectedImage;
-  String? selectedItem = 'Self';
-  List<String> items = [
-    'Self',
-    'Mother',
+  String selectedItem = 'Brother';
+  DateTime? _selectedDate;
+
+// TODO RELATIONSHIPS LIST
+  List<String> relations = [
     'Brother',
-    'Younger Brother',
+    'Sister',
+    'Mother',
+    'Father',
+    'Grandfather',
+    'Grandmother',
+    'Friends',
+    'Spouse',
+    'Husband',
   ];
 
-  // TODO ADD MEMBER TO FIREBASE
-  addMembersToFirebase() async {
-    if (_formKey.currentState!.validate() && selectedImage != null) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const Dialog(
-            child: Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Row(
-                children: [
-                  CircularProgressIndicator(
-                    color: primaryColor,
-                  ),
-                  SizedBox(
-                    width: 25.0,
-                  ),
-                  Text("Loading, Please wait"),
-                ],
-              ),
-            ),
-          );
-        },
-      );
 
-      try {
-        Reference firebaseStorageRef = FirebaseStorage.instance
-            .ref()
-            .child("UserImages")
-            .child("${randomAlphaNumeric(9)}.jpg");
-        final UploadTask task = firebaseStorageRef.putFile(selectedImage!);
+  Country selectedCountry = Country(
+    phoneCode: "91",
+    countryCode: "IN",
+    e164Sc: 0,
+    geographic: true,
+    level: 1,
+    name: "India",
+    example: "India",
+    displayName: "India",
+    displayNameNoCountryCode: "IN",
+    e164Key: "",
+  );
 
-        await task.whenComplete(() async {
-          var downloadURL = await firebaseStorageRef.getDownloadURL();
-          print("this is url $downloadURL");
-
-          await FirebaseFirestore.instance
-              .collection("membersList")
-              .doc(FirebaseAuth.instance.currentUser!.uid)
-              .collection("members")
-              .add({
-            "userId": user?.uid,
-            "name": nameController.text.trim(),
-            "phoneNumber": phoneNumberController.text.trim(),
-            "Gender": selectedGender,
-            "image": downloadURL,
-            "relation": selectedItem,
-            'age': ageController.text.trim()
-          });
-
-          // Clearing variables
-          setState(() {
-            nameController.clear();
-            phoneNumberController.clear();
-            ageController.clear();
-            selectedGender = 'male'; // Replace with your default gender value
-            selectedImage = null;
-            selectedItem = 'Self'; // Replace with your default dropdown value
-          });
-          Navigator.of(context).pop(); // Dismiss the dialog
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: Colors.green,
-              content: Text(
-                "Added Successfully",
-                style: TextStyle(fontSize: 20.0),
-              ),
-            ),
-          );
-        });
-      } on FirebaseAuthException catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            content: Text(
-              e.toString(),
-              style: const TextStyle(fontSize: 18.0, color: Colors.black),
-            ),
-          ),
-        );
-        if (kDebugMode) {
-          print(e.toString());
-        }
-      } finally {
-        Navigator.of(context).pop(); // Dismiss the dialog
-      }
-    }
+  // TODO Format The Date
+  String _formatTimestamp(Timestamp timestamp) {
+    DateTime dateTime = timestamp.toDate();
+    return DateFormat('dd-MM-yyyy').format(dateTime);
   }
 
-  // TODO DIALOG BOX
-  addMemberListDialogBox() {
+
+  // TODO UPDATE DATA DIALOG BOX
+  updateMembersDetails(String id, memberName, phoneNumber, dateOfBirth, gender, relation) async{
+    print("memberName $memberName");
+    print("phoneNumber $memberName");
+    print("dateOfBirth $dateOfBirth");
+    print("Gender $gender");
+    print("Relation $relation");
+    print("id $id");
+
+
+    final memberNameController = TextEditingController();
+    final phoneNumberController = TextEditingController();
+    final dateOfBirthController = TextEditingController();
+    String? myGender;
+    String? selectedRelation;
+
+
+    memberNameController.text = memberName;
+    phoneNumberController.text = phoneNumber;
+    dateOfBirthController.text = dateOfBirth;
+    myGender = gender;
+    selectedRelation = relation;
+
+
+
+
+    // TODO SELECT DATE
+    Future<void> _updateSelecteDate(BuildContext context) async {
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now(),
+        firstDate: DateTime(1900),
+        lastDate: DateTime.now(),
+      );
+
+      if (picked != null && picked != _selectedDate) {
+        setState(() {
+          _selectedDate = picked;
+          dateOfBirthController.text = "${picked.toLocal()}".split(' ')[0];
+        });
+      }
+    }
+
+
+
     return showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30.0),
-            side: const BorderSide(color: Colors.grey),
-          ),
-          content: StatefulBuilder(
-            builder: (BuildContext context, StateSetter setState) {
-              return SizedBox(
-                width: MediaQuery.of(context).size.width * 0.8,
-                child: SingleChildScrollView(
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Gap(15.0),
-                        const Center(
-                          child: Text(
-                            "Add Member",
-                            style: TextStyle(
-                              fontSize: 20.0,
-                              color: primaryColor,
-                              fontFamily: 'GT Walsheim Trial',
-                              fontWeight: FontWeight.w600,
-                            ),
+        context: context,
+        builder: (BuildContext context){
+          return AlertDialog(
+            backgroundColor: textColor,
+            title: const Text(
+              'Update Details',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            content: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState){
+                return SizedBox(
+                  height: 350.0,
+                  width: MediaQuery
+                      .of(context)
+                      .size
+                      .width,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 15.0,),
+                      MyTextFormField(
+                        readOnly: false,
+                        hintText: "Member Name",
+                        labelText: "Update Member Name",
+                        controller: memberNameController,
+                        enabledBorderColor: containerBorderColor,
+                        focusedBorderColor: primaryColor,
+                      ),
+                      const SizedBox(height: 15),
+                      TextFormField(
+                        cursorColor: primaryColor,
+                        controller: phoneNumberController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(
+                          color: textBlackColor,
+                          fontWeight: FontWeight.w400,
+                        ),
+                        validator: (String? value){
+                          if(value == null || value.isEmpty){
+                            return 'Please enter phone number';
+                          }else if(value.length > 10){
+                            return 'Number length is not correct should be 10';
+                          } return null;
+                        },
+                        onChanged: (value) {
+                          setState(() {
+                            phoneNumberController.text = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: "  Phone Number",
+                          labelText: 'Enter Phone Number',
+                          hintStyle: const TextStyle(
+                            color: textBlackColor,
                           ),
-                        ),
-                        const SizedBox(height: 25.0),
-                        MyTextFormField(
-                          controller: nameController,
-                          hintText: "Name",
-                          labelText: "Enter your name",
-                          validator: (String? value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your name';
-                            }
-                            return null;
-                          },
-                          enabledBorderColor: containerBorderColor,
-                          focusedBorderColor: containerBorderColor,
-                        ),
-                        const Gap(15.0),
-                        MyTextFormField(
-                          controller: phoneNumberController,
-                          hintText: "Phone Number",
-                          labelText: "Phone Number",
-                          keyboardType: TextInputType.number,
-                          validator: (String? value) {
-                            if (value == null ||
-                                value.isEmpty ||
-                                value.length < 9) {
-                              return 'Please enter your phone number';
-                            } else if (!RegExp(r'^\+?[0-9]+$')
-                                .hasMatch(value)) {
-                              return 'Please enter a valid phone number';
-                            }
-                            return null;
-                          },
-                          enabledBorderColor: containerBorderColor,
-                          focusedBorderColor: containerBorderColor,
-                        ),
-                        const Gap(15.0),
-                        MyTextFormField(
-                          controller: ageController,
-                          hintText: "Ex: 7",
-                          labelText: "Enter your age",
-                          keyboardType: TextInputType.number,
-                          validator: (String? value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please add your age';
-                            }
-                            return null;
-                          },
-                          enabledBorderColor: containerBorderColor,
-                          focusedBorderColor: containerBorderColor,
-                        ),
-                        const Gap(15.0),
-                        Container(
-                          alignment: Alignment.topLeft,
-                          margin: const EdgeInsets.only(left: 3.0),
-                          child: const Text(
-                            "Select Gender",
-                            style: TextStyle(
-                              fontSize: 15.0,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'GT Walsheim Trial',
-                              color: textBlackColor,
-                              letterSpacing: 0.3,
-                            ),
+                          labelStyle: TextStyle(
+                            color: textBlackColor.withOpacity(0.5),
                           ),
-                        ),
-                        const Gap(15.0),
-                        SimpleGenderSelection(
-                          selectedGender: selectedGender,
-                          onGenderChanged: (value) {
-                            setState(() {
-                              selectedGender = value;
-                            });
-                          },
-                        ),
-                        const Gap(15.0),
-                        PickImage(
-                          onImagePicked: (File image) {
-                            setState(() {
-                              selectedImage = image;
-                            });
-                          },
-                        ),
-                        const Gap(15.0),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                          decoration: BoxDecoration(
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(7.0),
-                            border: Border.all(color: Colors.grey),
+                            borderSide: const BorderSide(color: Colors.grey),
                           ),
-                          child: DropdownButton(
-                            isExpanded: true,
-                            value: selectedItem,
-                            hint: const Text(
-                              'Relation',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                            icon: const Icon(
-                              Icons.arrow_drop_down_sharp,
-                              color: Colors.grey,
-                            ),
-                            items: items.map((item) {
-                              return DropdownMenuItem(
-                                value: item,
-                                child: Text(
-                                  item,
-                                  style: const TextStyle(color: Colors.grey),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(7.0),
+                            borderSide:
+                            const BorderSide(color: containerBorderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(7.0),
+                            borderSide:
+                            const BorderSide(color: containerBorderColor),
+                          ),
+                          prefixIcon: Container(
+                            padding: const EdgeInsets.only(
+                                top: 13.5, left: 10.0, right: 5.0),
+                            // Add right padding
+                            child: InkWell(
+                              onTap: () {
+                                showCountryPicker(
+                                  context: context,
+                                  countryListTheme:
+                                  const CountryListThemeData(
+                                    bottomSheetHeight: 500,
+                                  ),
+                                  onSelect: (value) {
+                                    setState(() {
+                                      selectedCountry = value;
+                                    });
+                                  },
+                                );
+                              },
+                              child: Text(
+                                "${selectedCountry.flagEmoji} + ${selectedCountry.phoneCode}",
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.black,
                                 ),
-                              );
-                            }).toList(),
-                            onChanged: (newValue) {
+                              ),
+                            ),
+                          ),
+                          suffixIcon: phoneNumberController.text.length > 9
+                              ? Container(
+                            height: 30,
+                            width: 30,
+                            margin: const EdgeInsets.all(10.0),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.green,
+                            ),
+                            child: const Icon(
+                              Icons.done,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          )
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      MyTextFormField(
+                        readOnly: false,
+                        hintText: "Date Of Birth",
+                        labelText: "Date Of Birth",
+                        controller: dateOfBirthController,
+                        enabledBorderColor: containerBorderColor,
+                        focusedBorderColor: primaryColor,
+                        suffixIcon: GestureDetector(
+                          onTap: () {
+                            _updateSelecteDate(context);
+                          },
+                          child: const Icon(Icons.calendar_today),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Radio(
+                            value: 'male',
+                            activeColor: primaryColor,
+                            groupValue: myGender,
+                            onChanged: (value) {
                               setState(() {
-                                selectedItem = newValue;
+                                print("Radio button selected: $value");
+                                myGender = value.toString();
                               });
                             },
                           ),
-                        ),
-                        const Gap(30.0),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.pop(context);
-                              },
-                              child: Container(
-                                height: 40,
-                                width: 100,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: deleteButtonColor.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                child: const Text(
-                                  "CANCEL",
-                                  style: TextStyle(
-                                    fontSize: 15.0,
-                                    color: deleteButtonColor,
-                                    fontFamily: 'GT Walsheim Trial',
-                                  ),
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () {
+                          const Text('male'),
+                          Radio(
+                            value: 'female',
+                            activeColor: primaryColor,
+                            groupValue: myGender,
+                            onChanged: (value) {
+                              print("Radio button selected: $value");
 
-                                // Member newMember = Member(
-                                //   name: nameController.text,
-                                //   phoneNumber: phoneNumberController.text,
-                                //   age: int.tryParse(ageController.text.toString())!,
-                                //   gender: selectedGender,
-                                //   image: selectedImage,
-                                //   relation: selectedItem ?? 'Unknown',
-                                // );
-                                // setState(() {
-                                //   memberList.add(newMember);
-                                //   nameController.clear();
-                                //   phoneNumberController.clear();
-                                //   ageController.clear();
-                                //   selectedGender = '';
-                                //   selectedImage = null;
-                                //   selectedItem = null;
-                                //   _memberStreamController.add(memberList);
-                                //   Navigator.pop(context);
-                                // });
-
-                                addMembersToFirebase();
-                              },
-                              child: Container(
-                                height: 40,
-                                width: 100,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: primaryColor,
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                child: const Text(
-                                  "ADD",
-                                  style: TextStyle(
-                                    fontSize: 15.0,
-                                    color: textColor,
-                                    fontFamily: 'GT Walsheim Trial',
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                              setState(() {
+                                myGender = value.toString();
+                              });
+                            },
+                          ),
+                          const Text('female'),
+                        ],
+                      ),
+                      const SizedBox(height: 15,),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(7.0),
+                          border: Border.all(color: Colors.grey),
                         ),
-                        const Gap(15.0),
-                      ],
+                        child: DropdownButton(
+                          isExpanded: true,
+                          value: selectedRelation,
+                          hint: const Text(
+                            'Relation',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          icon: const Icon(
+                            Icons.arrow_drop_down_sharp,
+                            color: Colors.grey,
+                          ),
+                          items: relations.map((item) {
+                            return DropdownMenuItem(
+                              value: item,
+                              child: Text(
+                                item,
+                                style: const TextStyle(color: Colors.grey),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              selectedRelation = newValue;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  SizedBox(
+                    width: 110.0,
+                    height: 43.0,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: primaryColor, shadowColor: textBlackColor.withOpacity(0.3),
+                          side: BorderSide(
+                            color: primaryColor.withOpacity(0.3),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          )),
+                      child: const Text(
+                        "Back",
+                        style: TextStyle(fontSize: 15.0),
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
-          ),
-        );
-      },
+                  SizedBox(
+                    width: 110.0,
+                    height: 43.0,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        _updateMember(context, id, memberNameController.text, phoneNumberController.text, _selectedDate, selectedGender, selectedRelation);
+                      },
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: textColor, shadowColor: textBlackColor.withOpacity(0.3),
+                          backgroundColor: primaryColor,
+                          side: BorderSide(
+                            color: textColor.withOpacity(0.3),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.0),
+                          )),
+                      child: const Text(
+                        "Update",
+                        style: TextStyle(fontSize: 17.0),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          );
+        }
     );
+  }
+
+  _updateMember(context, String id, memberName, phoneNumber, dateOfBirth, gender, relation) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      await updateMember(context, id, {
+        'name': memberName,
+        'gender': gender,
+        'dateOfBirth': dateOfBirth,
+        'relation': relation,
+        'phoneNumber': phoneNumber,
+      });
+
+      Navigator.of(context).pop(); // Close the dialog
+
+    } catch (error) {
+      print("Error updating data: $error");
+      CustomToast.showToast(context, "Failed to update data. Please try again.");
+
+    } finally {
+      setState(() {
+        _isLoading = false; // Hide circular progress indicator
+      });
+    }
+  }
+
+  updateMember(context, String docId, Map<String, dynamic> newData) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('membersList')
+          .doc(user!.uid)
+          .collection('members')
+          .doc(docId)
+          .update(newData);
+    } catch (error) {
+      CustomToast.showToast(context, "Error updating user data: $error");
+      print("Error updating user data: $error");
+      rethrow;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+  }
+
+  @override
+  void dispose() {
+    nameController.clear();
+    phoneNumberController.clear();
+    dateOfBirth.clear();
+    selectedGender = "Brother";
+    _selectedDate = null;
+    super.dispose();
   }
 
   @override
@@ -382,7 +435,7 @@ class _MembersListScreenState extends State<MembersListScreen> {
     double width = MediaQuery.of(context).size.width;
     User? user = FirebaseAuth.instance.currentUser;
     return Scaffold(
-      backgroundColor: primaryColor,
+      backgroundColor: textColor,
       appBar: AppBar(
         backgroundColor: primaryColor,
         elevation: 0.0,
@@ -413,176 +466,6 @@ class _MembersListScreenState extends State<MembersListScreen> {
           ),
         ),
       ),
-
-      // body: StreamBuilder<List<Member>>(
-      //   stream: _memberStream,
-      //   builder: (context, snapshot) {
-      //     if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-      //       List<Member> updatedMemberList = snapshot.data!;
-      //       return Center(
-      //         child: RefreshIndicator(
-      //           onRefresh: () async {
-      //             await Future.delayed(const Duration(seconds: 1));
-      //             _memberStreamController.add(updatedMemberList);
-      //           },
-      //           child: Container(
-      //             height: height,
-      //             width: width,
-      //             margin: const EdgeInsets.only(top: 10.0),
-      //             decoration: const BoxDecoration(
-      //               color: textColor,
-      //               borderRadius: BorderRadius.only(
-      //                 topLeft: Radius.circular(30.0),
-      //                 topRight: Radius.circular(30.0),
-      //               ),
-      //             ),
-      //             child: Column(
-      //               children: [
-      //                 Expanded(
-      //                   child: ListView.builder(
-      //                     itemCount: updatedMemberList.length,
-      //                     physics: const BouncingScrollPhysics(),
-      //                     itemBuilder: (BuildContext context, int index) {
-      //                       return Container(
-      //                         height: 70,
-      //                         width: width,
-      //                         margin: const EdgeInsets.only(
-      //                           top: 20.0,
-      //                           left: 18.0,
-      //                           right: 18.0,
-      //                         ),
-      //                         decoration: BoxDecoration(
-      //                           border:
-      //                               Border.all(color: Colors.grey, width: 1.0),
-      //                           borderRadius: BorderRadius.circular(10.0),
-      //                         ),
-      //                         child: Row(
-      //                           mainAxisAlignment:
-      //                               MainAxisAlignment.spaceEvenly,
-      //                           children: [
-      //                             Padding(
-      //                               padding: const EdgeInsets.only(left: 8.0),
-      //                               child: CircleAvatar(
-      //                                 backgroundColor:
-      //                                     primaryColor.withOpacity(0.2),
-      //                                 child: const Text(
-      //                                   "SK",
-      //                                   style: TextStyle(
-      //                                     color: textBlackColor,
-      //                                     fontFamily: 'GT Walsheim Trial',
-      //                                     fontSize: 15.0,
-      //                                     fontWeight: FontWeight.w600,
-      //                                   ),
-      //                                 ),
-      //                               ),
-      //                             ),
-      //                             SizedBox(
-      //                               height: height,
-      //                               width: 130,
-      //                               child: ListTile(
-      //                                 title: Text(
-      //                                   updatedMemberList[index]
-      //                                       .name
-      //                                       .toString(),
-      //                                   style: const TextStyle(
-      //                                     color: textBlackColor,
-      //                                     fontFamily: 'GT Walsheim Trial',
-      //                                     fontSize: 15.0,
-      //                                     fontWeight: FontWeight.w600,
-      //                                   ),
-      //                                 ),
-      //                                 subtitle: Text(
-      //                                   updatedMemberList[index]
-      //                                       .phoneNumber
-      //                                       .toString(),
-      //                                   style: TextStyle(
-      //                                     color:
-      //                                         textBlackColor.withOpacity(0.3),
-      //                                     fontFamily: 'GT Walsheim Trial',
-      //                                     fontSize: 12.0,
-      //                                   ),
-      //                                 ),
-      //                               ),
-      //                             ),
-      //                             Container(
-      //                               height: 20,
-      //                               width: 80,
-      //                               alignment: Alignment.center,
-      //                               margin: const EdgeInsets.only(
-      //                                 bottom: 10.0,
-      //                                 right: 20,
-      //                               ),
-      //                               decoration: BoxDecoration(
-      //                                 color: primaryColor.withOpacity(0.2),
-      //                                 borderRadius: BorderRadius.circular(3.0),
-      //                               ),
-      //                               child: Text(
-      //                                 updatedMemberList[index]
-      //                                     .relation
-      //                                     .toString(),
-      //                                 style: const TextStyle(
-      //                                   fontSize: 8.0,
-      //                                   color: primaryColor,
-      //                                   fontWeight: FontWeight.bold,
-      //                                 ),
-      //                               ),
-      //                             ),
-      //                             InkWell(
-      //                               onTap: () {
-      //                                 setState(() {
-      //                                   updatedMemberList.removeAt(index);
-      //                                   _memberStreamController
-      //                                       .add(updatedMemberList);
-      //                                 });
-      //                               },
-      //                               child: Container(
-      //                                 height: 25,
-      //                                 width: 60,
-      //                                 alignment: Alignment.center,
-      //                                 margin: const EdgeInsets.only(right: 10),
-      //                                 decoration: BoxDecoration(
-      //                                   color: Colors.red,
-      //                                   borderRadius:
-      //                                       BorderRadius.circular(3.0),
-      //                                 ),
-      //                                 child: const Text(
-      //                                   "Delete",
-      //                                   style: TextStyle(
-      //                                     fontSize: 10.0,
-      //                                     color: textColor,
-      //                                     fontWeight: FontWeight.bold,
-      //                                   ),
-      //                                 ),
-      //                               ),
-      //                             )
-      //                           ],
-      //                         ),
-      //                       );
-      //                     },
-      //                   ),
-      //                 ),
-      //               ],
-      //             ),
-      //           ),
-      //         ),
-      //       );
-      //     } else if (snapshot.hasError) {
-      //       return Text("Error: ${snapshot.error}");
-      //     } else {
-      //       return const Center(
-      //         child: Text(
-      //           "No data available",
-      //           style: TextStyle(
-      //             color: Colors.white,
-      //             fontSize: 18.0,
-      //             fontWeight: FontWeight.bold,
-      //           ),
-      //         ),
-      //       );
-      //     }
-      //   },
-      // ),
-
       body: StreamBuilder(
         stream: FirebaseFirestore.instance
             .collection('membersList')
@@ -610,12 +493,18 @@ class _MembersListScreenState extends State<MembersListScreen> {
 
           try {
             List<Member> members = snapshot.data!.docs.map((doc) {
+              Timestamp dateOfBirthTimestamp = doc['dateOfBirth'];
+              DateTime dateOfBirth = dateOfBirthTimestamp.toDate();
+
+              print("DocId ${doc.id}");
+
+
               return Member(
                 memberId: doc.id,
                 name: doc['name'],
                 phoneNumber: doc['phoneNumber'],
-                age: doc['age'],
-                gender: doc['Gender'],
+                dateOfBirth: dateOfBirth,
+                gender: doc['gender'],
                 relation: doc['relation'],
                 image: doc['image'],
               );
@@ -643,9 +532,15 @@ class _MembersListScreenState extends State<MembersListScreen> {
                       itemCount: members.length,
                       physics: const BouncingScrollPhysics(),
                       itemBuilder: (BuildContext context, int index) {
+
+                        String formattedDate = _formatTimestamp(snapshot
+                            .data!
+                            .docs[index]['dateOfBirth'] as Timestamp? ??
+                            Timestamp.now());
+
                         return Container(
                           height: 70,
-                          width: width,
+                          width: 300.0,
                           margin: const EdgeInsets.only(
                             top: 20.0,
                             left: 18.0,
@@ -662,14 +557,17 @@ class _MembersListScreenState extends State<MembersListScreen> {
                                 padding: const EdgeInsets.only(left: 8.0),
                                 child: CircleAvatar(
                                   radius: 20.0,
-                                  backgroundColor: primaryColor.withOpacity(0.2),
+                                  backgroundColor:
+                                      primaryColor.withOpacity(0.2),
                                   child: FutureBuilder<void>(
                                     future: precacheImage(
-                                      NetworkImage(members[index].image.toString()),
+                                      NetworkImage(
+                                          members[index].image.toString()),
                                       context,
                                     ),
                                     builder: (context, snapshot) {
-                                      if (snapshot.connectionState == ConnectionState.done) {
+                                      if (snapshot.connectionState ==
+                                          ConnectionState.done) {
                                         return CircleAvatar(
                                           radius: 20.0,
                                           backgroundImage: NetworkImage(
@@ -680,7 +578,7 @@ class _MembersListScreenState extends State<MembersListScreen> {
                                         return Shimmer.fromColors(
                                           baseColor: Colors.grey[300]!,
                                           highlightColor: Colors.grey[100]!,
-                                          child: CircleAvatar(
+                                          child: const CircleAvatar(
                                             radius: 20.0,
                                           ),
                                         );
@@ -691,15 +589,30 @@ class _MembersListScreenState extends State<MembersListScreen> {
                               ),
                               SizedBox(
                                 height: height,
-                                width: 130,
+                                width: 180,
                                 child: ListTile(
-                                  title: Text(
-                                    members[index].name.toString(),
-                                    style: const TextStyle(
-                                      color: textBlackColor,
-                                      fontFamily: 'GT Walsheim Trial',
-                                      fontSize: 15.0,
-                                      fontWeight: FontWeight.w600,
+                                  title: RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: members[index].name,
+                                          style: const TextStyle(
+                                            color: textBlackColor,
+                                            fontFamily: 'GT Walsheim Trial',
+                                            fontSize: 15.0,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: ' (${members[index].relation})',
+                                          style: const TextStyle(
+                                            color: primaryColor,
+                                            fontFamily: 'GT Walsheim Trial',
+                                            fontSize: 15.0,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   subtitle: Text(
@@ -712,26 +625,30 @@ class _MembersListScreenState extends State<MembersListScreen> {
                                   ),
                                 ),
                               ),
-                              Container(
-                                height: 20,
-                                width: 80,
-                                alignment: Alignment.center,
-                                margin: const EdgeInsets.only(
-                                  bottom: 10.0,
-                                  right: 20,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: primaryColor.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(3.0),
-                                ),
-                                child: Text(
-                                  members[index].relation.toString(),
-                                  style: const TextStyle(
-                                    fontSize: 8.0,
-                                    color: primaryColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              InkWell(
+                                onTap: (){
+                                  updateMembersDetails(
+                                    members[index].memberId.toString(),
+                                    members[index].name.toString(),
+                                    members[index].phoneNumber.toString(),
+                                    formattedDate,
+                                    members[index].gender.toString(),
+                                    members[index].relation.toString()
+                                  );
+                                },
+                                child: Container(
+                                    height: 30,
+                                    width: 30,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: primaryColor,
+                                      borderRadius: BorderRadius.circular(20.0),
+                                    ),
+                                    child: const Icon(
+                                      Icons.edit,
+                                      size: 20.0,
+                                      color: textColor,
+                                    )),
                               ),
                               InkWell(
                                 onTap: () {
@@ -752,29 +669,25 @@ class _MembersListScreenState extends State<MembersListScreen> {
                                     print("Error deleting document: $error");
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Error deleting document'),
+                                        content:
+                                            Text('Error deleting document'),
                                       ),
                                     );
                                   });
                                 },
                                 child: Container(
-                                  height: 25,
-                                  width: 60,
-                                  alignment: Alignment.center,
-                                  margin: const EdgeInsets.only(right: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    borderRadius: BorderRadius.circular(3.0),
-                                  ),
-                                  child: const Text(
-                                    "Delete",
-                                    style: TextStyle(
-                                      fontSize: 10.0,
-                                      color: textColor,
-                                      fontWeight: FontWeight.bold,
+                                    height: 30,
+                                    width: 30,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(20.0),
                                     ),
-                                  ),
-                                ),
+                                    child: const Icon(
+                                      Icons.delete,
+                                      size: 20.0,
+                                      color: textColor,
+                                    )),
                               )
                             ],
                           ),
@@ -795,7 +708,11 @@ class _MembersListScreenState extends State<MembersListScreen> {
       ),
 
       floatingActionButton: GlowingFloatingActionButton(
-        onPressed: addMemberListDialogBox,
+        onPressed: (){
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AddMembersScreen()));
+        },
+        textColor: textColor,
+        myColor: primaryColor,
       ),
     );
   }

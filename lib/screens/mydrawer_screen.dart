@@ -1,17 +1,65 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 import 'package:medallyproapp/constants/mycolors.dart';
-import 'package:medallyproapp/providers/login_auth_provider.dart';
-import 'package:medallyproapp/screens/medicine_screen.dart';
+import 'package:medallyproapp/screens/add_prescription.dart';
 import 'package:medallyproapp/screens/members_list.dart';
 import 'package:medallyproapp/screens/profile_screen.dart';
-import 'package:provider/provider.dart';
-
+import 'package:shimmer/shimmer.dart';
 import '../auth/auth_manager_class.dart';
 import '../auth/login_screen.dart';
+import '../sharedpreference/share_preference.dart';
 
-class MyDrawerScreen extends StatelessWidget {
-  const MyDrawerScreen({super.key});
+class MyDrawerScreen extends StatefulWidget {
+  MyDrawerScreen({super.key});
+
+  @override
+  State<MyDrawerScreen> createState() => _MyDrawerScreenState();
+}
+
+class _MyDrawerScreenState extends State<MyDrawerScreen> {
+  String? userId = MySharedPrefClass.preferences?.getString("UserID");
+
+  late String name = "";
+  late String phoneNumber = "";
+  bool isDataLoaded = false;
+
+  void fetchDataFromFirebase() async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        // Assuming 'name' and 'phoneNumber' are the field names in your Firestore document
+        name = snapshot.docs[0]['name'];
+        phoneNumber = snapshot.docs[0]['phoneNumber'];
+
+        // Print the retrieved data (for debugging purposes)
+        print("Name: $name");
+        print("Phone Number: $phoneNumber");
+
+        // Update the state to reflect changes in the UI
+        setState(() {
+          isDataLoaded = true;
+        });
+      } else {
+        // Handle the case where no data is found
+        print("No data found in Firestore");
+      }
+    } catch (error) {
+      // Handle errors during data retrieval
+      print("Error fetching data: $error");
+    }
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    fetchDataFromFirebase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,27 +117,39 @@ class MyDrawerScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 80.0, left: 90.0),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 80.0, left: 90.0),
                     child: ListTile(
-                      title: Text(
-                        "Sunil Kumar Gad",
-                        style: TextStyle(
-                          fontSize: 17.0,
-                          color: primaryColor,
-                          fontFamily: 'GT Walsheim Trial',
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      subtitle: Text(
-                        "+91 9876543210",
-                        style: TextStyle(
-                          fontSize: 12.0,
-                          color: containerBorderColor,
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'GT Walsheim Trial',
-                        ),
-                      ),
+                      title: isDataLoaded
+                          ? Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 17.0,
+                                color: primaryColor,
+                                fontFamily: 'GT Walsheim Trial',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            )
+                          : Shimmer.fromColors(
+                              baseColor: Colors.grey[300]!,
+                              highlightColor: Colors.grey[100]!,
+                              child: const Text("Loading..."),
+                            ),
+                      subtitle: isDataLoaded
+                          ? Text(
+                              phoneNumber,
+                              style: const TextStyle(
+                                fontSize: 17.0,
+                                color: primaryColor,
+                                fontFamily: 'GT Walsheim Trial',
+                                fontWeight: FontWeight.w600,
+                              ),
+                            )
+                          : Shimmer.fromColors(
+                              baseColor: Colors.grey[300]!,
+                              highlightColor: Colors.grey[100]!,
+                              child: const Text("Loading..."),
+                            ),
                     ),
                   )
                 ],
@@ -158,7 +218,7 @@ class MyDrawerScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => MedicineScreen(),
+                        builder: (context) => const AddPrescriptionScreen(),
                       ),
                     );
                   },
@@ -179,50 +239,53 @@ class MyDrawerScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0),
-                child: ListTile(
-                  leading: Image.asset(
-                    "assets/icons/settingicon.png",
-                    height: 25.0,
-                  ),
-                  title: const Text(
-                    "Reminder Settings",
-                    style: TextStyle(
-                      fontSize: 17.0,
-                      color: textColor,
-                      fontFamily: 'GT Walsheim Trial',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 20.0),
-                child: ListTile(
-                  leading: Image.asset(
-                    "assets/icons/abouticon.png",
-                    height: 25.0,
-                  ),
-                  title: const Text(
-                    "About",
-                    style: TextStyle(
-                      fontSize: 17.0,
-                      color: textColor,
-                      fontFamily: 'GT Walsheim Trial',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ),
+              // Padding(
+              //   padding: const EdgeInsets.only(left: 20.0),
+              //   child: ListTile(
+              //     leading: Image.asset(
+              //       "assets/icons/settingicon.png",
+              //       height: 25.0,
+              //     ),
+              //     title: const Text(
+              //       "Reminder Settings",
+              //       style: TextStyle(
+              //         fontSize: 17.0,
+              //         color: textColor,
+              //         fontFamily: 'GT Walsheim Trial',
+              //         fontWeight: FontWeight.w400,
+              //       ),
+              //     ),
+              //   ),
+              // ),
+              // Padding(
+              //   padding: const EdgeInsets.only(left: 20.0),
+              //   child: ListTile(
+              //     leading: Image.asset(
+              //       "assets/icons/abouticon.png",
+              //       height: 25.0,
+              //     ),
+              //     title: const Text(
+              //       "About",
+              //       style: TextStyle(
+              //         fontSize: 17.0,
+              //         color: textColor,
+              //         fontFamily: 'GT Walsheim Trial',
+              //         fontWeight: FontWeight.w400,
+              //       ),
+              //     ),
+              //   ),
+              // ),
               const Spacer(),
               Padding(
                 padding: const EdgeInsets.only(left: 20.0, bottom: 30.0),
                 child: ListTile(
-                  onTap: () async{
+                  onTap: () async {
                     // Set login status to false
                     await AuthManager.setLoggedIn(false);
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+                    Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const LoginScreen()));
                   },
                   leading: Image.asset(
                     "assets/icons/logouticon.png",

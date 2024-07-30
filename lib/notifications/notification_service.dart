@@ -47,47 +47,13 @@ class NotificationServices {
     );
   }
 
-  // Future<void> scheduleNotification(
-  //     List<DateTime> notificationTimes, String title, String body) async {
-  //   const AndroidNotificationDetails androidNotificationDetails =
-  //   AndroidNotificationDetails(
-  //     'channelId',
-  //     'channelName',
-  //     importance: Importance.max,
-  //     priority: Priority.high,
-  //   );
-  //
-  //   const NotificationDetails notificationDetails =
-  //   NotificationDetails(android: androidNotificationDetails);
-  //
-  //   for (int i = 0; i < notificationTimes.length; i++) {
-  //     tz.TZDateTime scheduledTime = tz.TZDateTime.from(
-  //       notificationTimes[i],
-  //       tz.local,
-  //     );
-  //
-  //     if (scheduledTime.isBefore(DateTime.now())) {
-  //       print("Skipping notification at $scheduledTime as it is in the past.");
-  //       continue; // Skip scheduling if it's in the past
-  //     }
-  //
-  //     await _flutterLocalNotificationsPlugin.zonedSchedule(
-  //       i,
-  //       title,
-  //       body,
-  //       scheduledTime,
-  //       notificationDetails,
-  //       androidAllowWhileIdle: true,
-  //       uiLocalNotificationDateInterpretation:
-  //       UILocalNotificationDateInterpretation.absoluteTime,
-  //     );
-  //
-  //     print("Scheduled $title at $scheduledTime");
-  //   }
-  // }
 
-  Future<void> scheduleNotification(
-      List<tz.TZDateTime?> notificationTimes, String title, String body) async {
+
+  Future<void>  scheduleNotification(
+      List<tz.TZDateTime?> notificationTimes,  List<String> medicineNames,
+      List<String> notes,
+      List<String> doctorNames,
+      List<String> timesList,) async {
     const AndroidNotificationDetails androidNotificationDetails =
     AndroidNotificationDetails(
       'channelId',
@@ -108,18 +74,19 @@ class NotificationServices {
         continue; // Skip scheduling if it's in the past
       }
 
+
       await _flutterLocalNotificationsPlugin.zonedSchedule(
         i,
-        title,
-        body,
-        scheduledTime!,
+        medicineNames[i], // Use the corresponding medicine name for this notification
+        'Notes: ${notes[i]}\nTime: ${timesList[i]}\nDoctor: ${doctorNames[i]}',
+        scheduledTime,
         notificationDetails,
         androidAllowWhileIdle: true,
         uiLocalNotificationDateInterpretation:
         UILocalNotificationDateInterpretation.absoluteTime,
       );
 
-      print("Scheduled $title at $scheduledTime");
+      print("Scheduled $medicineNames at $scheduledTime");
     }
   }
 
@@ -129,3 +96,43 @@ class NotificationServices {
   }
 }
 
+
+// TODO Old Schedule Notification Function
+// Future<void> scheduleNotification(
+//     List<DateTime> notificationTimes, String title, String body) async {
+//   const AndroidNotificationDetails androidNotificationDetails =
+//   AndroidNotificationDetails(
+//     'channelId',
+//     'channelName',
+//     importance: Importance.max,
+//     priority: Priority.high,
+//   );
+//
+//   const NotificationDetails notificationDetails =
+//   NotificationDetails(android: androidNotificationDetails);
+//
+//   for (int i = 0; i < notificationTimes.length; i++) {
+//     tz.TZDateTime scheduledTime = tz.TZDateTime.from(
+//       notificationTimes[i],
+//       tz.local,
+//     );
+//
+//     if (scheduledTime.isBefore(DateTime.now())) {
+//       print("Skipping notification at $scheduledTime as it is in the past.");
+//       continue; // Skip scheduling if it's in the past
+//     }
+//
+//     await _flutterLocalNotificationsPlugin.zonedSchedule(
+//       i,
+//       title,
+//       body,
+//       scheduledTime,
+//       notificationDetails,
+//       androidAllowWhileIdle: true,
+//       uiLocalNotificationDateInterpretation:
+//       UILocalNotificationDateInterpretation.absoluteTime,
+//     );
+//
+//     print("Scheduled $title at $scheduledTime");
+//   }
+// }

@@ -6,6 +6,7 @@ import 'package:medallyproapp/constants/mycolors.dart';
 import 'package:medallyproapp/providers/member_provider_addprescription.dart';
 import 'package:medallyproapp/screens/medicine_screen.dart';
 import 'package:medallyproapp/screens/prescription_list.dart';
+import 'package:medallyproapp/sharedpreference/share_preference.dart';
 import 'package:medallyproapp/widgets/custom_button.dart';
 import 'package:medallyproapp/widgets/my_textformfield.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -22,19 +23,19 @@ class AddPrescriptionScreen extends StatefulWidget {
 class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   TextEditingController drNameController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  String? userNamePersonal;
 
   String? selectedItem;
   String? selectedRelation;
   File? _image;
-  String? name;
   String? relation;
 
   // TODO Dropdown List
   List<String> items = [
-    'Sandeep (brother)',
+    'Sandeep (siblings)',
     'Shaila (mother)',
-    "Shaki (self)",
-    'Zain (father)',
+    "Shaki (father)",
+    'Zain (friend)',
   ];
 
   // TODO Get Image
@@ -159,6 +160,25 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
         );
       }
     }
+    else {
+      // Show toast/snackbar if any required field is missing
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text(
+            "Please fill all the required fields and select an image.",
+            style: TextStyle(fontSize: 18.0, color: Colors.white),
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    userNamePersonal = MySharedPrefClass.preferences?.getString("myName");
   }
 
 
@@ -167,6 +187,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
     double height = MediaQuery.of(context).size.height;
     double width = MediaQuery.of(context).size.width;
     final memberProvider = Provider.of<MemberProvider>(context);
+    print("MyName $userNamePersonal");
     memberProvider.fetchMembers();
     return Scaffold(
       backgroundColor: primaryColor,
@@ -274,6 +295,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 30.0),
                   child: MyTextFormField(
+                    readOnly: false,
                     controller: drNameController,
                     validator: (String? value) {
                       if (value == null || value.isEmpty) {
@@ -281,7 +303,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                       }
                       return null;
                     },
-                    hintText: "Dr Sunil Park",
+                    hintText: "Enter Dr. Name",
                     labelText: "Dr. Name",
                     enabledBorderColor: containerBorderColor,
                     focusedBorderColor: primaryColor,
@@ -330,58 +352,60 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                           Icons.arrow_drop_down_sharp,
                           color: Colors.grey,
                         ),
-                        items: memberProvider.members.map<DropdownMenuItem<String>>((Member member) {
-                          return DropdownMenuItem<String>(
-                            value: "${member.name} (${member.relation})",
+                        items: [
+                           DropdownMenuItem<String>(
+                            value: "$userNamePersonal (Self)",
                             child: Text(
-                              "${member.name.toString()} (${member.relation.toString()})",
+                              "$userNamePersonal (Self)",
                               style: const TextStyle(color: textBlackColor),
                             ),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
+                          ),
+                          ...memberProvider.members.map<DropdownMenuItem<String>>((Member member) {
+                            return DropdownMenuItem<String>(
+                              value: "${member.name} (${member.relation})",
+                              child: Text(
+                                "${member.name.toString()} (${member.relation.toString()})",
+                                style: const TextStyle(color: textBlackColor),
+                              ),
+                            );
+                          }),
+                        ],
+                        onChanged: (newValue){
                           setState(() {
                             print("NewValue is $newValue");
                             selectedItem = newValue;
-                            // selectedRelation = memberRelation;
                           });
                         },
+
+
+                        // items: memberProvider.members.map<DropdownMenuItem<String>>((Member member) {
+                        //   return DropdownMenuItem<String>(
+                        //     value: "${member.name} (${member.relation})",
+                        //     child: Text(
+                        //       "${member.name.toString()} (${member.relation.toString()})",
+                        //       style: const TextStyle(color: textBlackColor),
+                        //     ),
+                        //   );
+                        // }).toList(),
+                        // onChanged: (newValue) {
+                        //   setState(() {
+                        //     print("NewValue is $newValue");
+                        //     selectedItem = newValue;
+                        //     // selectedRelation = memberRelation;
+                        //   });
+                        // },
                       ),
                     ),
 
                   ),
                 ),
-                const Gap(30),
-                // GestureDetector(
-                //   onTap: (){
-                //     Navigator.push(
-                //       context,
-                //       MaterialPageRoute(
-                //         builder: (context) => const MedicineScreen(),
-                //       ),
-                //     );
-                //   },
-                //   child: Container(
-                //     alignment: Alignment.topRight,
-                //     margin: const EdgeInsets.only(right: 35.0),
-                //     child: const Text(
-                //       "Add New",
-                //       style: TextStyle(
-                //           fontSize: 16.0,
-                //           fontWeight: FontWeight.w700,
-                //           fontFamily: 'GT Walsheim Trial',
-                //           color: textBlackColor,
-                //           letterSpacing: 0.3),
-                //     ),
-                //   ),
-                // ),
-                const Gap(30),
+                const Gap(60),
                 GestureDetector(
                   onTap: () {
                     formValidation();
                   },
                   child: CustomButton(
-                    text: "Add Medicine",
+                    text: "Add Prescription",
                   ),
                 )
               ],

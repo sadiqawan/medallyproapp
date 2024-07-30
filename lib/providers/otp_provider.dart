@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../auth/otp_screen.dart';
 
 class OtpNotifier with ChangeNotifier {
@@ -10,13 +11,17 @@ class OtpNotifier with ChangeNotifier {
 
   set isRegistering(bool value) {
     _isRegistering = value;
+    print("Registering $_isRegistering");
     notifyListeners();
   }
 
   User? _user;
   User? get user => _user;
 
-  Future<void> signInWithPhoneNumber(String phoneNumber, context) async {
+  String _verificationid = "";
+  int? _resendtoken;
+
+  Future<void> signInWithPhoneNumber(String? phoneNumber, context) async {
     try {
       await _auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
@@ -30,11 +35,11 @@ class OtpNotifier with ChangeNotifier {
           // Handle other verification failures here
           // Set isRegistering to false to stop the circular progress indicator
           isRegistering = false;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Failed to verify phone number")),
-          );
+          Fluttertoast.showToast(msg: "Failed to verify phone number");
         },
         codeSent: (String verificationId, int? resendToken) {
+          _verificationid = verificationId;
+          _resendtoken = resendToken;
           if (kDebugMode) {
             print("Code Sent: $verificationId");
           }
@@ -42,11 +47,15 @@ class OtpNotifier with ChangeNotifier {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => OtpScreen(verificationId: verificationId),
+              builder: (context) => OtpScreen(verificationId: verificationId, phoneNumber: phoneNumber,),
             ),
           );
         },
-        codeAutoRetrievalTimeout: (String verificationId) {},
+        timeout: const Duration(seconds: 25),
+        forceResendingToken: _resendtoken,
+        codeAutoRetrievalTimeout: (String verificationId) {
+          verificationId = _verificationid;
+        },
       );
     } catch (e) {
       if (kDebugMode) {
@@ -55,10 +64,8 @@ class OtpNotifier with ChangeNotifier {
       // Handle other exceptions here
       // Set isRegistering to false to stop the circular progress indicator
       isRegistering = false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to initiate phone verification")),
-      );
-    }
+      Fluttertoast.showToast(msg: "Failed to initiate phone verification");    }
   }
+
 }
 
